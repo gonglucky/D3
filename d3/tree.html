@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Tree</title>
+    <script src="d3.js"></script>
+    <link rel="icon" href="./static/pinkheart.ico">
+  </head>
+  <body>
+    <svg width="1600" height="940" id="mainsvg" class="svgs" style="display: block; margin: auto;"></svg>
+    <script>
+      const svg = d3.select('#mainsvg');
+      const width = +svg.attr('width'); //通过attr获取元素的属性  表达式 A=+B 会进行 B转化为数字 赋值给A
+      const height = +svg.attr('height');
+      const margin = {top: 50, right: 150, bottom: 50, left: 60};
+      const innerWidth = width - margin.left - margin.right;
+      const innerHeight = height - margin.top - margin.bottom;
+
+      const g = svg.append('g').attr('transform', `translate(${margin.left}, ${margin.top})`);//在svg中添加并平移g
+      var root;
+      var color;
+
+      const fill = d => {
+        if (d.depth === 0)
+            return color(d.data.name)
+        while (d.depth > 1) 
+            d = d.parent; 
+        return color(d.data.name); 
+      }
+      const render = function(){
+
+          // color = d3.scaleOrdinal()
+          // .domain(root.descendants().filter(d=> d.depth <= 1).map(d=> d.data.name))
+          // .range(d3.schemeCategory10);//与下面等价
+          color = d3.scaleOrdinal(d3.schemeCategory10);
+
+
+          g.selectAll('path').data(root.links()).join('path')//root.links()设置每个结点之间的连线，即source和target data将root.links()中的每一组数据绑定到各种的path中
+          .attr('fill','none')
+          .attr('stroke','black')
+          .attr('stroke-width',1.5)
+          .attr('d',d3.linkHorizontal().x( d => d.y).y(d => d.x));//x()和y()分别代表如何在source和target取横纵坐标轴
+                                                                  //贝塞尔生成曲线生成器d3.linkHorizontal()返回一个新的 link 生成器，生成的曲线在曲线的终点和起点处的切线是水平方向的。
+          g.selectAll('circle').data(root.descendants()).join('circle')//root.descendants() 返回后代节点数组，第一个节点为自身，然后依次为所有子节点的拓扑排序（即广度优先）。
+          .attr('cx',d => d.y)//设置circle的坐标和半径
+          .attr('cy',d => d.x)
+          .attr('r',6)
+          .attr('fill',fill)
+          .attr('stroke',)
+          //.attr('stroke-width',3);
+          g.selectAll('text').data(root.descendants()).join('text')
+          .attr('font-size','1em')
+          .attr('text-anchor',d => d.children ? 'end':'start')
+          .attr('x',d => (d.children ? -6:6) + d.y)
+          .attr('y',d =>d.x+5)
+          .text(d => d.data.name);
+
+      }
+      d3.json('./data/games.json').then(data => {
+        root = d3.hierarchy(data);//预处理成中间数据，加上树结点的深度和高度，为后面处理做准备
+        
+        root = d3.tree().size([innerHeight,innerWidth])(root);//为每个结点加上坐标,因为tree函数默认树是竖着的，我们设置的是横着，所以先传入innerHeight作为树的宽
+        render();
+      });
+    </script>
+  </body>
+</html>

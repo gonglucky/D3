@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>Line</title>
+    <script src="d3.js"></script>
+</head>
+
+<body>
+    <svg width="1600" height="800" id="mainsvg" class="svgs"></svg>
+    <script>
+        const svg = d3.select('#mainsvg');
+        const width = +svg.attr('width');
+        const height = +svg.attr('height');
+        const margin = { top: 120, right: 50, bottom: 50, left: 120 };
+        const innerWidth = width - margin.left - margin.right;
+        const innerHeight = height - margin.top - margin.bottom;
+
+        const g = svg.append('g').attr('id', 'maingroup')
+                  .attr('transform', `translate(${margin.left}, ${margin.top})`);
+        
+        const xValue = (datum) => { return datum['日期'] };
+        const yValue = (datum) => { return datum['现有确诊'] };
+        let xSacle, yScale;
+        let alldates;
+        let allkeys;
+
+        const render_init = function (data) {
+            xScale = d3.scaleTime() //scaleLinear()的一个变种 
+                .domain(d3.extent(data, xValue))
+                .range([0, innerWidth])
+                .nice();//改变函数的 domain ，能自动把 0.00000000000001 变为最接近它的 0 ， 9.999999991 变为最接近它的 10 
+
+            yScale = d3.scaleLinear()
+                .domain([d3.max(data, yValue), d3.min(data, yValue)])
+                .range([0, innerHeight])
+                .nice();
+
+            // Adding axes
+            const xAxis = d3.axisBottom(xScale)
+                .ticks(Math.floor(alldates.length) / 4)//刻度  分成5份
+                //.tickFormat(d3.timeFormat('%b-%d'))
+                .tickSize(-innerHeight)//刻度的长度
+            const xAxisGroup = g.append('g').call(xAxis)
+                .attr('transform', `translate(0, ${innerHeight})`);
+
+            const yAxis = d3.axisLeft(yScale).tickSize(-innerWidth);
+            const yAxisGroup = g.append('g').call(yAxis);
+
+            g.selectAll('.tick text').attr('font-size', '2em');
+            g.append('path').attr('id', 'alterPath');
+        };
+
+        const render_update = function (data) {
+            const line = d3.line()
+                .x(d => { return xScale(xValue(d)) })
+                .y(d => { return yScale(yValue(d)) })
+                .curve(d3.curveCardinal.tension(0.5))
+
+            // lineEmpty is typically used for the first animation that raise the line up; 
+            const lineEmpty = d3.line()
+                .x(d => { return xScale(xValue(d)) })
+                .y(d => { return yScale(0) })
+                .curve(d3.curveCardinal.tension(0.5))
+
+            const maingroup = d3.select('#maingroup');
+            const pathupdate = maingroup.selectAll('.datacurve').data([data])
+
+            const pathenter = pathupdate.enter().append('path')
+                .attr('class', 'datacurve')
+                .attr("fill", "none")
+                .attr("stroke", "steelblue")
+                .attr("stroke-width", 2.5)
+                .attr("d", lineEmpty)
+
+            pathupdate.merge(pathenter)
+                .transition().duration(2000).ease(d3.easeLinear)
+                .attr("d", line)
+        };
+
+        const render_update_alter = function (data) {
+
+            const line = d3.line()//设置d的函数，d3定义好的
+                .x(d => xScale(xValue(d)))//先通过xValue函数对数据取值，然后调用xScale将值映射到对应的位置  是对一组数据操作
+                .y(d => yScale(yValue(d)))
+                .curve(d3.curveCardinal.tension(0.5));
+            // See https://github.com/d3/d3-shape/blob/v1.3.7/README.md#curves  插值接口
+
+            d3.select('#alterPath').datum(data)//datum  将datum(data)中的data当做一个整体扔给前面select的图元
+                .attr('stroke', 'green')
+                .attr('stroke-width', 2.5)
+                .attr('fill', 'none')//填充必须设为none  否则默认填充黑色在折线和坐标轴之间
+                .transition().duration(2000)
+                .attr('d', line);
+        }
+
+        d3.csv('./data/province.csv').then(function (data) {
+            data = data.filter(d => d['省份'] !== '总计');
+            data = data.filter(d => d['省份'] !== '湖北');
+            alldates = Array.from(new Set(data.map(d => d['日期'])));
+
+            data.forEach(d => {
+                d['确诊人数'] = +(d['确诊人数']);
+                d['日期'] = new Date(d['日期']);
+            });
+            let provinces = {};
+            allkeys = Array.from(new Set(data.map(d => d['省份'])));
+            allkeys.forEach(key => {
+                provinces[key] = [];
+            });
+            data.forEach(d => {
+                provinces[d['省份']].push(d);
+            });
+
+            allkeys.forEach(key => {
+                provinces[key] = provinces[key].sort((a, b) => {
+                    return a['日期'] - b['日期'];//日期之前已经格式化了  所以不用new Date(a)
+                });
+            });
+
+
+            render_init(data);
+            let c = 0;
+            let intervalId = setInterval(() => {
+                if (c >= allkeys.length) {
+                    clearInterval(intervalId);
+                } else {
+                    let key = allkeys[c];
+                    render_update_alter(provinces[key]);
+                    c = c + 1;
+                }
+            }, 2000);
+        });
+    </script>
+</body>
+
+</html>

@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>Hello D3</title>
+    <script type="text/javascript" src="d3.js"></script>
+</head>
+
+<body>
+    <svg width="1600" height="800" id="mainsvg" class="svg"></svg>
+    <script>
+        //数据 一个对象数组
+        const data = [{ name: 'Wan-Fu', value: 20 },
+        { name: 'Yang', value: 6 }, { name: 'Cai', value: 16 }, { name: 'Liang', value: 10 },
+        { name: 'Chen', value: 6 }, { name: 'Long', value: 10 }, { name: 'Dong', value: 12 },
+        { name: 'He', value: 20 }, { name: 'Xiang', value: 12 }, { name: 'Godness', value: 20 },
+        { name: 'Yu', value: 15 }, { name: 'Zheng', value: 14 },
+        { name: 'Peng', value: 15 }, { name: 'Li', value: 18 }];
+
+        //创建设置画布对象
+        const svg = d3.select('#mainsvg');
+        const width = +svg.attr('width');
+        const height = +svg.attr('height');
+        //设置画布外边界
+        const margin = { top: 60, right: 30, bottom: 60, left: 150 };//画布边界
+        const innerWidth = width - margin.left - margin.right;
+        const innerHeight = height - margin.top - margin.bottom;
+
+        //设置一个<g>  一个图元一个<g>
+        const g = svg.append('g').attr('id', 'maingroup')
+             .attr('transform', `translate(${margin.left}, ${margin.top})`);
+        
+        //domain为输入数据范围  range为比例尺范围
+        const xScale = d3.scaleLinear()
+            .domain([0, d3.max(data, d => d.value)])
+            .range([0, innerWidth]);
+
+        const yScale = d3.scaleBand()
+            .domain(data.map(d => d.name))
+            .range([0, innerHeight])
+            .padding(0.1);//两个数据之间预留的位置大小
+
+        
+        // //坐标轴也是一个<g>
+        // const yAxis = d3.axisLeft(yScale)   //左侧坐标轴  axisBotton为下侧坐标轴
+        //     .tickSize(-innerWidth);     //增加横线
+        // //画出y坐标
+        // g.append('g').call(yAxis);//将g.append('g')中的数据传到yScale函数中 即实际配置坐标轴
+
+        // const xAxis = d3.axisBottom(xScale)
+        //     .tickSize(-innerHeight);
+        // g.append('g').call(xAxis).attr('transform', `translate(0,${innerHeight})`);
+
+        //设置每个线条
+        data.forEach(d => {
+            g.append('rect')
+                .attr('width', xScale(d.value))
+                .attr('height', yScale.bandwidth())
+                .attr('fill', 'green')       //设置颜色
+                .attr('y', yScale(d.name))
+                .attr('opacity','0.8');//CSS中的不透明度
+        });
+
+        const yAxis = d3.axisLeft(yScale).tickSize(-innerWidth);
+        const xAxis = d3.axisBottom(xScale).tickSize(-innerHeight);
+
+        // g.append('g').call(yAxis);
+        // g.append("g").call(xAxis)
+        // .attr('transform',`translate(0,${innerHeight})`);
+
+        //将坐标<g>中加一个<g>
+        const yAxisGroup = g.append('g').call(yAxis)
+        .attr('id','yaxis')
+        .append('text')
+        .text('Name')
+        .attr('font-size','3em')
+        .attr('transform',`rotate(-90)`)
+        .attr('x',-innerHeight/2)
+        .attr('y',-120)
+        .attr('fill','black');
+
+        const xAxisGroup = g.append('g').call(xAxis)
+        .attr('id','xaxis')
+        .attr('transform',`translate(${0}, ${innerHeight})`)
+        .append('text')
+        .text('Value')
+        .attr('font-size','3em')
+        .attr('x',innerWidth/2)
+        .attr('y',50)
+        .attr('fill','black');
+
+        
+        
+        //设置tick的text字体大小为2em
+        d3.selectAll('.tick text').attr('font-size', '2em');
+
+        //设置标题
+        g.append('text').text('Members of CSCG')
+            .attr('font-size', '3em')
+            .attr('transform', `translate(${innerWidth / 2},-10)`)
+            .attr('text-anchor', 'middle');//text居中
+    </script>
+</body>
+
+</html>

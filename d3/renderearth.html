@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>Render the Earth</title>
+    <link rel="stylesheet" href="/css/earth.css">
+    <link rel="stylesheet" href="/css/d3tip.css">
+    <script src="d3.js"></script>
+    <script src="topojson.js"></script>
+    <script src="/library/d3-tip.js"></script>
+</head>
+
+<body>
+    <svg width="1600" height="800" id="mainsvg" class="svgs"></svg>
+    <script>
+
+        let svg = d3.select('svg');
+        const width = +svg.attr('width');
+        const height = +svg.attr('height');
+        const margin = { top: 60, right: 60, bottom: 10, left: 60 };
+        const innerWidth = width - margin.left - margin.right;
+        const innerHeight = height - margin.top - margin.bottom;
+        const g = svg.append('g').attr('id', 'maingroup')
+            .attr('transform', `translate(${margin.left}, ${margin.top})`);
+
+        const projection = d3.geoNaturalEarth1();//投影方式
+
+        const geo = d3.geoPath().projection(projection);//projection()将地图数据投影到画布上
+
+        const tip = d3.tip()
+        .attr('class','d3-tip').html(d=> d.properties.name);//用d3-tip设置对话框
+        svg.call(tip);//将tip扔给svg中
+        let lastid = undefined;
+
+        d3.json('./data/countries-110m.json').then(data => {
+            let worldmeta = topojson.feature(data, data.objects.countries);//将topojson转为geojson 
+
+            projection.fitSize([innerWidth,innerHeight],worldmeta);//设置地图占用画布大小,worldmeta中有每个属性的坐标
+            g.selectAll('path').data(worldmeta.features).join('path')//接受的是数据对象的feature
+            .attr('d',geo)
+            .attr("stroke","black")
+            .attr('stroke-width',1)
+            .on('mouseover',function(d)
+            {
+                d3.select(this)
+                .attr('opacity',0.5)
+                .attr('stroke','white')
+                .attr('stroke-width',6)
+            })
+            .on('mouseout',function(d){
+                d3.select(this)
+                .attr('opacity',1)
+                .attr('stroke','black')
+                .attr('stroke-width',1)
+            })
+            .on('click',function(d){
+                if(lastid !== d.properties.name)
+                {
+                    tip.show(d);//调用tip对话框
+                    lastid = d.properties.name;
+                }else{
+                    tip.hide(d);
+                }
+                
+            })
+
+        });
+    </script>
+</body>
+
+</html>
